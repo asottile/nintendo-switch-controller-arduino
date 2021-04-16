@@ -9,6 +9,20 @@ import cv2
 import numpy
 import serial
 
+W_B = 768
+H_B = 480
+D_X_B = 696
+D_Y_B = 420
+F_X_B = 686
+F_Y_B = 289
+
+W = 1280
+H = 720
+D_X = int(W * D_X_B / W_B)
+D_Y = int(H * D_Y_B / H_B)
+F_X = int(W * F_X_B / W_B)
+F_Y = int(H * F_Y_B / H_B)
+
 
 def _press(ser: serial.Serial, s: str, duration: float = .1) -> None:
     print(f'{s=} {duration=}')
@@ -88,8 +102,8 @@ def main() -> int:
     args = parser.parse_args()
 
     vid = cv2.VideoCapture(0)
-    vid.set(cv2.CAP_PROP_FRAME_WIDTH, 768)
-    vid.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    vid.set(cv2.CAP_PROP_FRAME_WIDTH, W)
+    vid.set(cv2.CAP_PROP_FRAME_HEIGHT, H)
 
     with serial.Serial(args.serial, 9600) as ser, _shh(ser):
         while True:
@@ -113,7 +127,7 @@ def main() -> int:
             t_end = time.time() + .7
 
             frame = _getframe(vid)
-            while not numpy.array_equal(frame[420][696], (59, 59, 59)):
+            while not numpy.array_equal(frame[D_Y][D_X], (49, 49, 49)):
                 if time.time() > t_end:
                     ser.write(b'd' if left else b'a')
                     left = not left
@@ -124,12 +138,12 @@ def main() -> int:
 
             print('dialog started')
 
-            _await_not_pixel(ser, vid, x=696, y=420, pixel=(59, 59, 59))
+            _await_not_pixel(ser, vid, x=D_X, y=D_Y, pixel=(49, 49, 49))
 
             print('dialog ended')
             t0 = time.time()
 
-            _await_pixel(ser, vid, x=696, y=420, pixel=(59, 59, 59))
+            _await_pixel(ser, vid, x=D_X, y=D_Y, pixel=(49, 49, 49))
 
             t1 = time.time()
             print(f'dialog delay: {t1 - t0:.3f}s')
@@ -138,11 +152,10 @@ def main() -> int:
                 print('SHINY!!!')
                 _alarm(ser, vid)
 
-            _await_pixel(ser, vid, x=686, y=289, pixel=(16, 16, 16))
+            _await_pixel(ser, vid, x=F_X, y=F_Y, pixel=(0, 0, 0))
             _press(ser, 'w')
             _press(ser, 'A')
             _wait_and_render(vid, 4.5)
-            print('run complete?')
 
     vid.release()
     cv2.destroyAllWindows()
